@@ -7,7 +7,13 @@ Project Goals:
 1. provide resumable stackful coroutines in javascript
 2. show an effect
 
-Roadmap
+### Running examples
+
+Examples are implemented as independent binaries in [src/bin](src/bin).
+
+Use `cargo run --bin example-<n>`
+
+### Roadmap
 
 - [x] Run arbitrary javascript with v8 bindings
 - [x] Call a native function from within JS

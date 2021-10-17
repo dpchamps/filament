@@ -1,15 +1,48 @@
 use rusty_v8 as v8;
+use std::borrow::BorrowMut;
+use std::cell::{RefCell, Cell, Ref};
+
 mod core;
 
-pub struct JsRuntime<'a, 'b> {
-    global_object: v8::Local<'a, v8::ObjectTemplate>,
-    context: v8::Local<'a, v8::Context>,
-    context_scope: v8::ContextScope<'b, v8::HandleScope<'a>>,
+pub struct V8Platform {
+    platform: v8::UniquePtr<v8::Platform>,
+    isolate: v8::OwnedIsolate,
 }
 
-impl<'a, 'b> JsRuntime<'a, 'b>
+impl V8Platform {
+    pub fn new() -> Self {
+        let mut platform = v8::new_default_platform();
+        v8::V8::initialize_platform(platform.take().unwrap());
+        v8::V8::initialize();
+        let mut isolate = v8::Isolate::new(v8::CreateParams::default());
+
+        V8Platform {
+            platform,
+            isolate,
+        }
+    }
+
+    pub fn isolate_scope(&mut self) -> v8::HandleScope<()> {
+        v8::HandleScope::new(&mut self.isolate)
+    }
+}
+
+// impl Drop for V8Platform {
+//     fn drop(&mut self) {
+//         unsafe {
+//             v8::V8::dispose();
+//         }
+//         v8::V8::shutdown_platform();
+//     }
+// }
+
+pub struct JsRuntime<'a> {
+    global_object: v8::Local<'a, v8::ObjectTemplate>,
+}
+
+impl<'a> JsRuntime<'a>
 {
-    pub fn new(isolate_scope: &'b mut v8::HandleScope<'a, ()>) -> Self {
+    pub fn new(isolate_scope: &mut v8::HandleScope<'a, ()>) -> Self {
         let global_object = v8::ObjectTemplate::new(isolate_scope);
 
         // Every instance gets logInfo
@@ -18,25 +51,18 @@ impl<'a, 'b> JsRuntime<'a, 'b>
             v8::FunctionTemplate::new(isolate_scope, core::log_info).into()
         );
 
-        // Create a new context.
-        let context = v8::Context::new_from_template(isolate_scope, global_object);
-        let context_scope = v8::ContextScope::new(isolate_scope, context);
-
-
         JsRuntime {
-            context,
-            context_scope,
-            global_object
+            global_object,
         }
     }
 
-    pub fn run_script(&mut self, script: &str) -> Result<(), &'static str> {
-        // Create a string containing the JavaScript source code.
-        let code = v8::String::new(&mut self.context_scope, script).unwrap();
-        // Compile the source code.
-        let script = v8::Script::compile(&mut self.context_scope, code, None).unwrap();
+    pub fn run_script(&mut self, isolate_scope: &mut v8::HandleScope<'a, ()>, script: &str) -> Result<(), &'static str> {
+        let context = v8::Context::new_from_template(isolate_scope, self.global_object);
+        let mut context_scope = v8::ContextScope::new(isolate_scope, context);
+        let code = v8::String::new(&mut context_scope, script).unwrap();
+        let script = v8::Script::compile(&mut context_scope, code, None).unwrap();
 
-        match script.run(&mut self.context_scope) {
+        match script.run(&mut context_scope) {
             Some(_) => Ok(()),
             None => {
                 Err("Failed to run script")
@@ -44,11 +70,10 @@ impl<'a, 'b> JsRuntime<'a, 'b>
         }
     }
 
-    pub fn extend_global(&mut self, fn_name: &str, op: impl v8::MapFnTo<v8::FunctionCallback>){
-        // todo this is wrong and doesn't work
+    pub fn extend_global(&mut self, isolate_scope: & mut v8::HandleScope<'a, ()>, fn_name: &str, op: impl v8::MapFnTo<v8::FunctionCallback>){
         self.global_object.set(
-            v8::String::new(&mut self.context_scope, fn_name).unwrap().into(),
-            v8::FunctionTemplate::new(&mut self.context_scope, op).into()
+            v8::String::new(isolate_scope, fn_name).unwrap().into(),
+            v8::FunctionTemplate::new(isolate_scope, op).into()
         )
     }
 }

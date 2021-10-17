@@ -5,18 +5,15 @@ use rusty_v8::Local;
 
 fn main(){
     let file_contents = fs::read_to_string("./src/bin/native-fns.js").unwrap();
-    let platform = v8::new_default_platform().take().unwrap();
-    v8::V8::initialize_platform(platform);
-    v8::V8::initialize();
 
-    let mut isolate = v8::Isolate::new(v8::CreateParams::default());
-    let mut isolate_scope = v8::HandleScope::new(&mut isolate);
-    let mut rt = runtime::JsRuntime::new(&mut isolate_scope);
+    let mut platform = runtime::V8Platform::new();
+    let mut isolate_scope = platform.isolate_scope();
+    let mut runtime = runtime::JsRuntime::new(&mut isolate_scope);
 
-    rt.extend_global("passCallback", pass_callback);
-    rt.extend_global("callCbFromNative", call_callback_from_native);
+    runtime.extend_global(&mut isolate_scope, "passCallback", pass_callback);
+    runtime.extend_global(&mut isolate_scope, "callCbFromNative", call_callback_from_native);
 
-    rt.run_script(&file_contents).unwrap();
+    runtime.run_script(&mut isolate_scope, &file_contents).unwrap();
 }
 
 fn pass_callback(
