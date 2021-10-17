@@ -10,7 +10,7 @@ Project Goals:
 Roadmap
 
 - [x] Run arbitrary javascript with v8 bindings
-- [ ] Call a native function from within JS
+- [x] Call a native function from within JS
 - [ ] Pass data to and from native function  
 - [ ] Perform an async operation: shove something on the EL
 - [ ] Create a stackfull continuation
