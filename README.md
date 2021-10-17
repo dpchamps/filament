@@ -11,7 +11,7 @@ Roadmap
 
 - [x] Run arbitrary javascript with v8 bindings
 - [x] Call a native function from within JS
-- [ ] Pass data to and from native function  
+- [x] Pass data to and from native function  
 - [ ] Perform an async operation: shove something on the EL
 - [ ] Create a stackfull continuation
 - [ ] Implement a yieldable fiber that interops with EL

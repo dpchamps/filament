@@ -1,16 +1,9 @@
-mod runtime;
+use filament::runtime;
 use rusty_v8 as v8;
-use std::env;
 use std::fs;
-use std::path::{Path};
 
-fn main() {
-    let args : Vec<String> = env::args().collect();
-    let filepath = Path::new(
-        env::current_dir().unwrap().to_str().unwrap()
-    ).join(&args[1]);
-    let file_contents = fs::read_to_string(filepath).unwrap();
-
+fn main(){
+    let file_contents = fs::read_to_string("./src/bin/exercise-js.js").unwrap();
     let platform = v8::new_default_platform().take().unwrap();
     v8::V8::initialize_platform(platform);
     v8::V8::initialize();
@@ -20,5 +13,4 @@ fn main() {
     let mut rt = runtime::JsRuntime::new(&mut isolate_scope);
 
     rt.run_script(&file_contents).unwrap();
-
 }
